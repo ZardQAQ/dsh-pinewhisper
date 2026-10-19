@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a2921">
+  <meta name="description" content="松语小屋：一座藏在森林里的 Three.js 互动小屋。林间有风，花田有客，可切换晴雨雾雪与雷雨天气。">
+  <title>松语小屋 · Pinewhisper</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2322352a'/%3E%3Cpath d='M12 40 32 16l20 24M18 40v12h28V40' fill='none' stroke='%23e7c57d' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='45' r='3' fill='%23e7c57d'/%3E%3C/svg%3E">
+  <link rel="preload" href="./vendor/three.module.min.js" as="script" crossorigin="anonymous">
+  <link rel="stylesheet" href="./css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body data-weather="sunny">
+  <canvas id="scene" aria-label="可拖拽环视的三维森林小屋场景"></canvas>
+
+  <div id="vignette" aria-hidden="true"></div>
+  <div id="sky-flash" aria-hidden="true"></div>
+  <div class="film-grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-opacity=".34"/>
+          <path d="M17 37.5 32 19l15 18.5M21 37.5V48h22V37.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M28 48v-7h8v7M32 12v4M10 29l3 2M54 29l-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="32" cy="42.5" r="2.2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <p class="eyebrow">PINEWHISPER <span>·</span> 林间纪事</p>
+        <h1>松语小屋</h1>
+        <p class="tagline">林深见鹿，花暖闻蜂。</p>
+      </div>
+    </div>
+
+    <div class="weather-readout" id="weather-readout" aria-live="polite">
+      <p class="readout-kicker">此刻的林间</p>
+      <p class="readout-main">
+        <strong id="weather-name">晴朗</strong>
+        <span class="readout-separator">/</span>
+        <span id="weather-temp">22°</span>
+      </p>
+      <p class="readout-sub"><span id="weather-wind">微风</span><span class="dot">·</span><span id="weather-desc">阳光穿过松针，蜜蜂在花田里打转。</span></p>
+    </div>
+  </header>
+
+  <div class="orbit-hint" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 9.5V6.8a1.8 1.8 0 1 1 3.6 0v4.4-6a1.8 1.8 0 1 1 3.6 0v6-5a1.8 1.8 0 1 1 3.6 0v6.6-3.4a1.7 1.7 0 1 1 3.4 0v5.1A6.5 6.5 0 0 1 12.7 21h-.2A6.5 6.5 0 0 1 6 14.5v-1.1a1.8 1.8 0 0 1 3.6 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p><span>拖动环视</span><small>滚轮缩放 · 双击复位</small></p>
+  </div>
+
+  <div class="scene-index" aria-hidden="true">
+    <span class="scene-index-line"></span>
+    <span>SCENE 01</span>
+    <span class="scene-index-dim">松林南坡 · 花田空地</span>
+  </div>
+
+  <section class="weather-panel" aria-label="天气切换">
+    <div class="panel-head">
+      <div class="panel-title">
+        <span class="panel-eyebrow">WEATHER</span>
+        <span class="panel-cn">天气与光</span>
+      </div>
+      <button class="auto-cycle" id="auto-cycle" type="button" aria-pressed="false" aria-label="开启自动轮换天气">
+        <span class="auto-indicator"></span>
+        <span id="auto-label">自动轮换</span>
+        <span class="auto-key">0</span>
+      </button>
+    </div>
+
+    <div class="weather-options" role="group" aria-label="选择一种天气">
+      <button class="weather-button is-active" type="button" data-weather="sunny" aria-pressed="true">
+        <span class="weather-key">1</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.1"/>
+          <path d="M12 2.4v2.3M12 19.3v2.3M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.4 12h2.3M19.3 12h2.3M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+        </svg>
+        <span class="weather-label">晴朗</span>
+      </button>
+
+      <button class="weather-button" type="button" data-weather="rain" aria-pressed="false">
+        <span class="weather-key">2</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.8 15.2a4.1 4.1 0 0 1 .4-8.2 5.6 5.6 0 0 1 10.7 1.7 3.4 3.4 0 0 1-.6 6.5H6.8Z"/>
+          <path d="m8 18.2-.9 2.2M12.2 18.2l-.9 2.2M16.4 18.2l-.9 2.2"/>
+        </svg>
+        <span class="weather-label">细雨</span>
+      </button>
+
+      <button class="weather-button" type="button" data-weather="fog" aria-pressed="false">
+        <span class="weather-key">3</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.9 12.6a3.9 3.9 0 0 1 .4-7.8 5.3 5.3 0 0 1 10.1 1.6 3.2 3.2 0 0 1-.5 6.2"/>
+          <path d="M4.2 15.5h14.4M6.8 18.5h12M4.8 21.2h11.6"/>
+        </svg>
+        <span class="weather-label">薄雾</span>
+      </button>
+
+      <button class="weather-button" type="button" data-weather="snow" aria-pressed="false">
+        <span class="weather-key">4</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2.5v19M4.2 7.2l15.6 9.6M19.8 7.2 4.2 16.8M8.9 4.4l3.1 2.4 3.1-2.4M8.9 19.6l3.1-2.4 3.1 2.4"/>
+        </svg>
+        <span class="weather-label">落雪</span>
+      </button>
+
+      <button class="weather-button" type="button" data-weather="storm" aria-pressed="false">
+        <span class="weather-key">5</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.7 14.2a4.1 4.1 0 0 1 .4-8.2A5.6 5.6 0 0 1 17.8 7.7a3.4 3.4 0 0 1-.5 6.5H6.7Z"/>
+          <path d="m13.2 12.7-2 4h3l-2 4.2"/>
+        </svg>
+        <span class="weather-label">雷雨</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="footer-hint">
+    <span class="footer-line"></span>
+    <span>拖动环视</span>
+    <span class="dot">·</span>
+    <span>滚轮远近</span>
+    <span class="dot">·</span>
+    <span>快捷键 1–5 切换天气</span>
+  </div>
+
+  <div class="loader" id="loader" role="status" aria-live="polite">
+    <div class="loader-glow" aria-hidden="true"></div>
+    <div class="loader-inner">
+      <div class="loader-mark" aria-hidden="true">
+        <svg viewBox="0 0 92 92" fill="none">
+          <path d="M17 56 46 20l29 36M24 55v21h44V55" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M40 76V63h12v13M46 10v6M8 42l5 3M84 42l-5 3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+          <circle cx="46" cy="51" r="3" fill="currentColor"/>
+          <path d="M70 30c-5-5-13-5-18 0M70 30v8" stroke="currentColor" stroke-width="1" opacity=".45"/>
+        </svg>
+      </div>
+      <p class="loader-kicker">PINEWHISPER</p>
+      <h2>正在走进松林</h2>
+      <p class="loader-status">收集晨光、松针与一小片花田…</p>
+      <div class="loader-track" aria-hidden="true">
+        <span id="loader-bar"></span>
+      </div>
+      <p class="loader-percent" id="loader-percent">0%</p>
+    </div>
+    <p class="loader-foot">A TINY FOREST, BUILT IN THREE.JS</p>
+  </div>
+
+  <noscript>
+    <div class="noscript">这间林中小屋需要 JavaScript 才能点亮。</div>
+  </noscript>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
